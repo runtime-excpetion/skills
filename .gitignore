@@ -1,0 +1,14 @@
+.DS_Store
+
+# 本地配置、凭证与环境变量
+.env
+.env.*
+*.local
+config.json
+
+# 临时文件与抓取缓存
+tmp/
+temp/
+cache/
+*.tmp
+*.log
