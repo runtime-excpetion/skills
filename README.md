@@ -6,12 +6,19 @@
 
 ```text
 skills/
+├── docker-deploy/        # 用 Docker Compose 规范部署服务
 ├── web-to-siyuan/        # 将网页内容剪藏到思源笔记
 ├── weekly-report/        # 根据飞书日历生成工作周报
 └── writing-great-skills/ # 编写和优化 Skills 的方法论参考
 ```
 
 ## Skills 说明
+
+### docker-deploy
+
+用 Docker Compose 规范部署一个服务。该 Skill 会在默认部署目录（首次运行时询问并保存）下为服务建项目目录，生成 `docker-compose.yml`，扫描现有所有容器的宿主端口占用、从 8000 起分配空闲端口，以 bridge 网络启动，并汇报容器名、运行状态与端口映射。挂载卷遵循项目目录内用 `./` 相对路径、目录外用绝对路径的规范。
+
+默认部署目录与配置方式见 [`docker-deploy/SKILL.md`](docker-deploy/SKILL.md)。
 
 ### web-to-siyuan
 
