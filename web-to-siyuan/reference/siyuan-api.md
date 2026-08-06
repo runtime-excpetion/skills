@@ -1,6 +1,6 @@
 # 思源笔记 kernel API
 
-本文件是 [`web-to-siyuan`](../SKILL.md) 的披露参考：列出笔记本、上传图片、新建文档的接口用法。其中 `createDocWithMd` 的行为以实测为准（官方文档对它的 `path`/`title` 描述有误）。
+本文件是 [`web-to-siyuan`](../SKILL.md) 的披露参考：说明网页到 Markdown 的高保真转换，以及列出笔记本、上传图片、新建文档的接口用法。其中 `createDocWithMd` 的行为以实测为准（官方文档对它的 `path`/`title` 描述有误）。
 
 ## 端点与鉴权
 
@@ -80,11 +80,47 @@ curl -s -X POST $URL/api/asset/upload \
 
 **抓取**。先 WebFetch；返回验证页或内容残缺（反爬站点常见）时，改用 curl 抓取：微信公号链接带移动端微信 User-Agent 与 `Referer: https://mp.weixin.qq.com/` 头可绕过验证页，正文在 `id="js_content"` 容器内，图片真实地址在 `<img>` 的 `data-src` 属性。
 
-**转 Markdown**。HTML 转 Markdown 时（pandoc / html 解析），文字按原样保留，图片转成 `![](URL)` 引用。
+**转 Markdown**。优先对正文 DOM 做 HTML → Markdown 转换，不要先调用 `textContent`、`innerText` 或纯文本抽取后再猜格式。转换时保留标题、段落、列表、引用、表格、分隔线、链接、图片、行内代码和代码块；图片转成 `![](URL)` 引用。
+
+环境中存在 pandoc 时，优先把**正文 DOM 的 HTML 片段**交给 `pandoc --from=html --to=gfm --wrap=none`，不要把包含导航栏、页脚的整页 HTML 直接转换。pandoc 输出后仍须执行下方的代码块数量与围栏检查，并把围栏语言规范为思源易识别的 `` ```python `` 形式（围栏与语言之间不留空格）。pandoc 不存在或输出检查失败时，按下方 DOM 规则转换。
+
+### 代码块转换
+
+代码必须在通用正文清洗之前处理。推荐流程如下：
+
+1. 在正文 DOM 中查找 `<pre><code>...</code></pre>`、独立 `<pre>...</pre>`，以及常见的 `div.highlight pre`、`div.highlighter-rouge pre`、`figure.highlight pre` 等高亮容器。
+2. 对每个代码节点读取其文本内容并解码 HTML 实体，但保留原始换行与行首空格。只移除由 HTML 排版本身引入的单个首尾空行；不要 `trim` 每一行、折叠连续空格或合并换行。
+3. 从以下位置依次识别语言：`code` 的 `class="language-*"` / `class="lang-*"`、容器的 `data-lang` / `data-language`、高亮器类名、紧邻的代码标题。规范常见别名，如 `js`、`ts`、`py`、`sh`、`shell`、`html`、`css`、`json`、`yaml`、`sql`、`java`、`go`、`rust`、`cpp`。无法可靠判断时留空，不要臆测。
+4. 先用不可与正文冲突的占位符替换代码节点，再处理其余 HTML，最后把占位符恢复成 Markdown 代码块。这样可以避免段落归一化、图片资产化或 Markdown 转义破坏代码。
+5. 围栏长度必须大于代码内容中连续反引号的最大长度，且至少为 3。例如代码内已有三个连续反引号时，外层使用四个反引号；也可改用长度足够的 `~` 围栏。
+6. 围栏前后各保留一个空行：
+
+   ````markdown
+   ```python
+   def hello():
+       print("hello")
+   ```
+   ````
+
+7. `<code>` 不在 `<pre>` 内时转为行内代码。若内容自身含反引号，使用更长的反引号定界并在必要时在内容两侧加空格。
+
+不要把代码块内的 `#`、`-`、`*`、`[]()`、HTML 标签或图片样式文本当作正文 Markdown 再解析；也不要下载或改写代码块里的图片 URL。
+
+转换完成后，比较正文 DOM 中的代码块数与 Markdown fenced code block 数。两者不一致，或 `<code>` 中含换行但输出没有围栏时，判为转换失败并重走原始 HTML 管线。
 
 **图片资产化**。对每处图片引用，下载原图（沿用抓取时的请求头；外链有防盗链、容易失效，故转存为资产），经 `asset/upload` 上传（`assetsDirPath=/assets`），把引用改写为 `![](assets/<资产文件名>)`，保持原序。上传会给文件加时间戳后缀、每次文件名都不同——引用必须取本次 `succMap` 返回的实际文件名。无法下载的图片保留原外链并在汇报中说明。
 
 **形态校验**。转完 Markdown 后判断形态：图文混排按原结构组合（文字段落与图片引用交织）；若正文除页码占位、空白外无实质文字而页面确有图片，按全图处理——正文只保留按序的图片引用。
+
+### 来源信息组装
+
+抓取开始时保存用户输入的 URL 为 `original_url`，不得让 HTTP 重定向结果覆盖它。Markdown 正文必须以以下区块开头：
+
+```markdown
+> 原文地址：[https://example.com/article](<https://example.com/article>)
+```
+
+链接文本与目标都使用完整的 `original_url`，链接目标外层使用尖括号，避免 URL 中的括号破坏 Markdown。若 `final_url` 不同，在下一行增加 `> 最终地址：[{final_url}](<{final_url}>)`。来源区块后空一行，再写正文。
 
 ## 验证
 
