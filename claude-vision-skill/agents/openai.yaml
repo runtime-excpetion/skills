@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claude Vision 代理"
+  short_description: "为无原生视觉能力的运行时提供安全的图片识别配置与排障流程"
+  default_prompt: "使用 $claude-vision-skill 为当前项目配置并验证图片识别能力。"
