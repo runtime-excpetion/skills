@@ -6,6 +6,7 @@
 
 ```text
 skills/
+├── claude-vision-skill/  # 为无原生识图能力的运行时配置 OpenAI 兼容图片识别
 ├── docker-deploy/        # 用 Docker Compose 规范部署服务
 ├── web-to-siyuan/        # 将网页内容剪藏到思源笔记
 ├── weekly-report/        # 根据飞书日历生成工作周报
@@ -13,6 +14,12 @@ skills/
 ```
 
 ## Skills 说明
+
+### claude-vision-skill
+
+为缺少原生识图能力的 Claude Code、Cyberboss 或其他 Agent 运行时配置 OpenAI 兼容图片识别。该 Skill 通过 `scripts/vision.js` 将本地图片或图片 URL 发送给 OpenAI Chat Completions 兼容的视觉模型，并支持本地图片、远程图片、多图片处理，以及认证、端点、模型和超时错误的排查。
+
+凭据通过 `VISION_API_KEY`、`VISION_MODEL`、`VISION_BASE_URL` 环境变量提供，不写入 Skill 文件。使用方式、配置要求和排障流程见 [`claude-vision-skill/SKILL.md`](claude-vision-skill/SKILL.md)。
 
 ### docker-deploy
 
