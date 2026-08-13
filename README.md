@@ -8,6 +8,7 @@
 skills/
 ├── claude-vision-skill/  # 为无原生识图能力的运行时配置 OpenAI 兼容图片识别
 ├── docker-deploy/        # 用 Docker Compose 规范部署服务
+├── music-download-skill/ # 从 gdstudio 音乐接口搜索并下载歌曲到本地目录
 ├── web-to-siyuan/        # 将网页内容剪藏到思源笔记
 ├── weekly-report/        # 根据飞书日历生成工作周报
 └── writing-great-skills/ # 编写和优化 Skills 的方法论参考
@@ -26,6 +27,12 @@ skills/
 用 Docker Compose 规范部署一个服务。该 Skill 会在默认部署目录（首次运行时询问并保存）下为服务建项目目录，生成 `docker-compose.yml`，扫描现有所有容器的宿主端口占用、从 8000 起分配空闲端口，以 bridge 网络启动，并汇报容器名、运行状态与端口映射。挂载卷遵循项目目录内用 `./` 相对路径、目录外用绝对路径的规范。
 
 默认部署目录与配置方式见 [`docker-deploy/SKILL.md`](docker-deploy/SKILL.md)。
+
+### music-download-skill
+
+通过 gdstudio 音乐聚合接口(`https://music-api.gdstudio.xyz/api.php`)搜索歌曲并下载到本地目录。该 Skill 按稳定源顺序自动回退(`netease → joox → bilibili`)，支持语义音质档位(标准/高品/超品/无损/Hi-Res无损)、音质不可用时逐级降级、按「歌名-歌手」命名，以及按歌曲关键词清除已下载文件。
+
+下载目录、默认音质由本地配置提供，不写入 Skill 文件；API 端点、音质档位映射与限流规则见 [`music-download-skill/reference/api.md`](music-download-skill/reference/api.md)。
 
 ### web-to-siyuan
 
