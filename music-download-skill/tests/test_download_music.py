@@ -35,13 +35,13 @@ class FilenameTests(unittest.TestCase):
     def test_build_filename_single_artist(self):
         self.assertEqual(
             dm.build_filename("七里香", ["周杰倫"], ".mp3"),
-            "七里香-周杰倫.mp3",
+            "七里香-周杰伦.mp3",
         )
 
     def test_build_filename_multi_artist(self):
         self.assertEqual(
             dm.build_filename("千里之外", ["周杰倫", "费玉清"], ".mp3"),
-            "千里之外-周杰倫&费玉清.mp3",
+            "千里之外-周杰伦&费玉清.mp3",
         )
 
     def test_build_filename_unknown_artist(self):
@@ -53,6 +53,17 @@ class FilenameTests(unittest.TestCase):
     def test_sanitize_filename_part(self):
         self.assertEqual(dm.sanitize_filename_part('周/杰:倫*?"'), "周_杰_倫___")
         self.assertEqual(dm.sanitize_filename_part("  七里香   "), "七里香")
+
+
+class T2STests(unittest.TestCase):
+    def test_to_simplified(self):
+        self.assertEqual(dm.to_simplified("周杰倫"), "周杰伦")
+        self.assertEqual(dm.to_simplified("說好的幸福呢"), "说好的幸福呢")
+        self.assertEqual(dm.to_simplified("無與倫比"), "无与伦比")
+
+    def test_to_simplified_unchanged(self):
+        self.assertEqual(dm.to_simplified("七里香"), "七里香")
+        self.assertEqual(dm.to_simplified(""), "")
 
 
 class ExtensionTests(unittest.TestCase):
@@ -90,7 +101,7 @@ class SearchTests(unittest.TestCase):
             source, records = dm.search_sources("七里香", sources=["netease", "joox"])
         self.assertEqual(source, "joox")
         self.assertEqual(records[0]["name"], "七里香")
-        self.assertEqual(records[0]["artist"], ["周杰倫"])
+        self.assertEqual(records[0]["artist"], ["周杰伦"])
 
     def test_all_sources_empty(self):
         with mock.patch.object(dm, "api_request") as req:
@@ -100,15 +111,15 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(records, [])
 
     def test_non_json_skipped(self):
-        # netease 返回 dict(非列表)、joox 抛 ApiError(bilibili 503 HTML 模拟)
+        # netease 返回 dict(非列表)、joox 抛 ApiError(503 HTML 页模拟)、kuwo 返回结果
         with mock.patch.object(dm, "api_request") as req:
             req.side_effect = [
                 {"detail": "not supported"},
                 dm.ApiError("响应不是 JSON"),
                 [{"id": "b", "name": "Hello", "artist": ["Lionel Richie"]}],
             ]
-            source, records = dm.search_sources("hello", sources=["netease", "joox", "bilibili"])
-        self.assertEqual(source, "bilibili")
+            source, records = dm.search_sources("hello", sources=["netease", "joox", "kuwo"])
+        self.assertEqual(source, "kuwo")
         self.assertEqual(records[0]["name"], "Hello")
 
     def test_normalize_record(self):

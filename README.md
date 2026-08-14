@@ -30,7 +30,7 @@ skills/
 
 ### music-download-skill
 
-通过 gdstudio 音乐聚合接口(`https://music-api.gdstudio.xyz/api.php`)搜索歌曲并下载到本地目录。该 Skill 按稳定源顺序自动回退(`netease → joox → bilibili`)，支持语义音质档位(标准/高品/超品/无损/Hi-Res无损)、音质不可用时逐级降级、按「歌名-歌手」命名，以及按歌曲关键词清除已下载文件。
+通过 gdstudio 音乐聚合接口(`https://music-api.gdstudio.xyz/api.php`)搜索歌曲并下载到本地目录。该 Skill 按稳定源顺序自动回退(`netease → joox → kuwo`)，支持语义音质档位(标准/高品/超品/无损/Hi-Res无损)、音质不可用时逐级降级、按「歌名-歌手」命名(繁体自动转简体)，以及按歌曲关键词清除已下载文件。
 
 下载目录、默认音质由本地配置提供，不写入 Skill 文件；API 端点、音质档位映射与限流规则见 [`music-download-skill/reference/api.md`](music-download-skill/reference/api.md)。
 

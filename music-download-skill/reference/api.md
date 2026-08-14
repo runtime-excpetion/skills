@@ -94,11 +94,11 @@ GET /api.php?types=lyric&source=<源>&id=<lyric_id>
 
 ## 源顺序与可用性
 
-稳定源顺序:`netease → joox → bilibili`。搜索时按此顺序逐个请求,**第一个返回非空数组的源**即结果源。
+稳定源顺序:`netease → joox → kuwo`。搜索时按此顺序逐个请求,**第一个返回非空数组的源**即结果源。
 
 - `netease`:实测常返回 `[]`(中文英文均空),不稳定。
 - `joox`:实测可靠,中文搜索有效。
-- `bilibili`:偶发返回 503 HTML 页面(非 JSON)。
+- `kuwo`:实测返回空数组(接口侧暂未返回结果)。
 - `tencent`、`apple` 等返回 `{"detail": "Value of `source` is not supported."}`。
 
 搜索策略:某源返回空数组、非 JSON、或报不支持,视为该源无结果,继续下一个源;全部源无结果才判「找不到」。

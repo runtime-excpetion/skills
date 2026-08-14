@@ -26,7 +26,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 
 BASE_URL = "https://music-api.gdstudio.xyz/api.php"
-DEFAULT_SOURCES = ["netease", "joox", "bilibili"]
+DEFAULT_SOURCES = ["netease", "joox", "kuwo"]
 # 音质档位 → API 的 br 码率;TIER_NAMES 与 BR_TIERS 必须保持一致(单一来源见 api.md)
 TIER_NAMES = {
     "标准音质": 128,
@@ -58,6 +58,38 @@ EXT_BY_CONTENT_TYPE = {
     "audio/wav": ".wav",
     "audio/x-wav": ".wav",
 }
+
+
+# ---------- 繁简转换 ----------
+
+_t2s_table: dict[str, str] | None = None
+
+
+def _load_t2s_table() -> dict[str, str]:
+    """懒加载 scripts/t2s.tsv(OpenCC TSCharacters 繁体→简体),缓存到模块级。"""
+    global _t2s_table
+    if _t2s_table is not None:
+        return _t2s_table
+    table: dict[str, str] = {}
+    path = Path(__file__).with_name("t2s.tsv")
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 2 and parts[0] and parts[1]:
+                table[parts[0]] = parts[1].split(" ")[0]  # 多值取第一个简体形
+    _t2s_table = table
+    return table
+
+
+def to_simplified(text: str) -> str:
+    """繁体中文转简体(joox 等源返回繁体);无映射的字符原样保留。"""
+    if not text:
+        return text
+    table = _load_t2s_table()
+    return "".join(table.get(ch, ch) for ch in text)
 
 
 class ConfigError(ValueError):
@@ -168,30 +200,30 @@ def api_request(params: dict[str, Any], rate_limiter: RateLimiter | None = None)
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
-        # bilibili 偶发 503 HTML 页、joox 740 返回 200+503HTML 页等 → 视为该档/该源不可用
+        # 源偶发 503/HTML 页(如 joox 740 返回 200+503HTML 页)等 → 视为该档/该源不可用
         raise ApiError("响应不是 JSON(该音质或源不可用)") from exc
 
 
 # ---------- 搜索 ----------
 
 def normalize_record(record: Any) -> dict[str, Any] | None:
-    """从搜索记录抽 id/name/artist(数组)/album/source;缺 id 或 name 返回 None。"""
+    """从搜索记录抽 id/name/artist(数组)/album/source;缺 id 或 name 返回 None;繁体转简体。"""
     if not isinstance(record, dict):
         return None
     track_id = str(record.get("id", "")).strip()
-    name = str(record.get("name", "")).strip()
+    name = to_simplified(str(record.get("name", "")).strip())
     if not track_id or not name:
         return None
     artists = record.get("artist")
     if isinstance(artists, list):
-        artists = [str(a).strip() for a in artists if str(a).strip()]
+        artists = [to_simplified(str(a).strip()) for a in artists if str(a).strip()]
     else:
-        artists = [str(artists).strip()] if str(artists or "").strip() else []
+        artists = [to_simplified(str(artists).strip())] if str(artists or "").strip() else []
     return {
         "id": track_id,
         "name": name,
         "artist": artists,
-        "album": str(record.get("album", "") or ""),
+        "album": to_simplified(str(record.get("album", "") or "")),
         "source": str(record.get("source", "")),
     }
 
@@ -286,9 +318,9 @@ def sanitize_filename_part(value: str) -> str:
 
 
 def build_filename(name: str, artists: list[str], ext: str) -> str:
-    """按「歌名-歌手.后缀」命名,如 七里香-周杰倫.mp3;多歌手用 & 连接。"""
-    artist_part = sanitize_filename_part("&".join(artists or ["未知歌手"]))
-    song_part = sanitize_filename_part(name or "未知歌曲")
+    """按「歌名-歌手.后缀」命名,如 七里香-周杰伦.mp3;多歌手用 & 连接。"""
+    artist_part = sanitize_filename_part(to_simplified("&".join(artists or ["未知歌手"])))
+    song_part = sanitize_filename_part(to_simplified(name or "未知歌曲"))
     return f"{song_part}-{artist_part}{ext}"
 
 
